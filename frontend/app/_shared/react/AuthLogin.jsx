@@ -190,7 +190,7 @@ export function AuthLoginApp({ role = "admin" }) {
                 position: 'absolute', 
                 left: '12px', 
                 cursor: 'pointer', 
-                color: 'rgba(255,255,255,0.4)', 
+                color: '#38bdf8', 
                 zIndex: 10,
                 display: 'flex',
                 alignItems: 'center'
@@ -234,7 +234,7 @@ export function AuthLoginApp({ role = "admin" }) {
                         position: 'absolute', 
                         left: '12px', 
                         cursor: 'pointer', 
-                        color: 'rgba(255,255,255,0.4)', 
+                        color: '#38bdf8', 
                         zIndex: 10,
                         display: 'flex',
                         alignItems: 'center'
