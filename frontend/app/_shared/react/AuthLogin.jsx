@@ -183,11 +183,18 @@ export function AuthLoginApp({ role = "admin" }) {
           />
 
           <label className="form-label" htmlFor="password">Contraseña</label>
-          <div className="input-group mb-3">
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', marginBottom: '1rem' }}>
             <span 
-              className="input-group-text" 
               onClick={() => setShowPwd(!showPwd)} 
-              style={{ cursor: 'pointer', background: 'transparent', borderColor: 'var(--yelia-border-light, rgba(255,255,255,0.15))', borderRight: 'none' }}
+              style={{ 
+                position: 'absolute', 
+                left: '12px', 
+                cursor: 'pointer', 
+                color: 'rgba(255,255,255,0.4)', 
+                zIndex: 10,
+                display: 'flex',
+                alignItems: 'center'
+              }}
             >
               <i className={`bi ${showPwd ? 'bi-eye-slash-fill' : 'bi-eye-fill'}`} />
             </span>
@@ -200,7 +207,7 @@ export function AuthLoginApp({ role = "admin" }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={onKeyDown}
-              style={{ borderLeft: 'none' }}
+              style={{ paddingLeft: '38px', width: '100%' }}
             />
           </div>
 
@@ -220,11 +227,18 @@ export function AuthLoginApp({ role = "admin" }) {
                 <div className="request-form mt-3">
                   <input className="form-control mb-2" placeholder="Usuario deseado" maxLength={32} value={teacherRequest.username} onChange={(e) => setTeacherRequest({ ...teacherRequest, username: cleanUser(e.target.value) })} />
                   <input className="form-control mb-2" placeholder="Email institucional (opcional)" value={teacherRequest.email} onChange={(e) => setTeacherRequest({ ...teacherRequest, email: e.target.value })} />
-                  <div className="input-group mb-2">
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', marginBottom: '0.5rem' }}>
                     <span 
-                      className="input-group-text" 
                       onClick={() => setShowTeacherPwd(!showTeacherPwd)} 
-                      style={{ cursor: 'pointer', background: 'transparent', borderColor: 'var(--yelia-border-light, rgba(255,255,255,0.15))', borderRight: 'none', padding: '0.375rem 0.75rem' }}
+                      style={{ 
+                        position: 'absolute', 
+                        left: '12px', 
+                        cursor: 'pointer', 
+                        color: 'rgba(255,255,255,0.4)', 
+                        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
                     >
                       <i className={`bi ${showTeacherPwd ? 'bi-eye-slash-fill' : 'bi-eye-fill'}`} />
                     </span>
@@ -236,7 +250,7 @@ export function AuthLoginApp({ role = "admin" }) {
                       maxLength="128" 
                       value={teacherRequest.password} 
                       onChange={(e) => setTeacherRequest({ ...teacherRequest, password: e.target.value })} 
-                      style={{ borderLeft: 'none' }}
+                      style={{ paddingLeft: '38px', width: '100%' }}
                     />
                   </div>
                   <textarea className="form-control mb-2" rows="2" placeholder="Motivo o materia asignada" value={teacherRequest.reason} onChange={(e) => setTeacherRequest({ ...teacherRequest, reason: e.target.value })} />
