@@ -1,0 +1,52 @@
+# ======================================================
+# Git Ignore - YELIA4AP
+# Exclusiones de control de versiones
+# ======================================================
+
+# Entorno virtual y dependencias de Python
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.tox/
+
+# Registros y base de datos local
+logs/
+*.log
+instance/
+yelia.db
+yelia.db-journal
+*.db
+*.sqlite
+
+# Dependencias y compilación de Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+.docusaurus/
+.npm
+.yarn-error.log
+
+# Archivos de configuración de entorno (Contienen llaves API sensibles)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# IDEs y sistemas operativos
+.vscode/
+.idea/
+.project
+.settings/
+.DS_Store
+Thumbs.db
+desktop.ini

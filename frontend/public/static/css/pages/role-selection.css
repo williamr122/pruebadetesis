@@ -1,0 +1,291 @@
+/* Estilos generales de la página de selección de inicio de sesión - YELIA */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  
+  /* Mapeo directo a los colores corporativos del sistema YELIA */
+  --bg-dark: #071120;
+  --bg-card: #0f1d34;
+  --bg-card-hover: #12243f;
+  --border-card: rgba(125, 166, 214, 0.28);
+  --border-hover: rgba(90, 196, 255, 0.45);
+  
+  --color-primary: #38bdf8;
+  --color-success: #34d399;
+  --color-admin: #8b5cf6;
+  
+  --text-primary: #f3f8ff;
+  --text-secondary: #93a8c7;
+}
+
+body.role-selection-body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background-color: var(--bg-dark);
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.08) 0%, transparent 40%);
+  color: var(--text-primary);
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden; /* Evita scroll vertical */
+}
+
+.selection-container {
+  max-width: 1000px;
+  width: 90%;
+  height: 94vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  box-sizing: border-box;
+  padding: 1vh 0;
+}
+
+.selection-header {
+  margin-top: 1vh;
+  margin-bottom: 2vh;
+  animation: fadeInDown 0.8s ease-out;
+  text-align: center;
+}
+
+.selection-logo {
+  font-size: 2.8rem;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-admin));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.2rem;
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+.selection-header h1 {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0.2rem 0;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.selection-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  max-width: 650px;
+  margin: 0.2rem auto 0;
+  line-height: 1.5;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  margin: 1.5vh 0;
+}
+
+.role-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 2.5vh 1.5rem;
+  text-decoration: none;
+  color: var(--text-primary);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.role-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: transparent;
+  transition: background 0.3s ease;
+}
+
+.role-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--border-hover);
+  background: var(--bg-card-hover);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+.role-card.admin:hover {
+  box-shadow: 0 15px 35px rgba(139, 92, 246, 0.15);
+}
+.role-card.admin::before {
+  background: var(--color-admin);
+}
+
+.role-card.docente:hover {
+  box-shadow: 0 15px 35px rgba(52, 211, 153, 0.15);
+}
+.role-card.docente::before {
+  background: var(--color-success);
+}
+
+.role-card.estudiante:hover {
+  box-shadow: 0 15px 35px rgba(56, 189, 248, 0.15);
+}
+.role-card.estudiante::before {
+  background: var(--color-primary);
+}
+
+.role-icon-container {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.5vh;
+  font-size: 1.8rem;
+  transition: transform 0.3s ease;
+}
+
+.role-card:hover .role-icon-container {
+  transform: scale(1.08);
+}
+
+.role-card.admin .role-icon-container {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--color-admin);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.role-card.docente .role-icon-container {
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--color-success);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.role-card.estudiante .role-icon-container {
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--color-primary);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.role-card h2 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 0.8vh;
+}
+
+.role-card p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 2vh;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.role-btn {
+  padding: 0.5rem 1.8rem;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  width: 80%;
+  text-align: center;
+}
+
+.role-card.admin .role-btn {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--color-admin);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.role-card.admin:hover .role-btn {
+  background: var(--color-admin);
+  color: white;
+}
+
+.role-card.docente .role-btn {
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--color-success);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.role-card.docente:hover .role-btn {
+  background: var(--color-success);
+  color: white;
+}
+
+.role-card.estudiante .role-btn {
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--color-primary);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.role-card.estudiante:hover .role-btn {
+  background: var(--color-primary);
+  color: white;
+}
+
+.selection-footer {
+  margin-top: 1.5vh;
+  margin-bottom: 1vh;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: center;
+  animation: fadeIn 1.2s ease-out;
+  line-height: 1.5;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 900px) {
+  body.role-selection-body {
+    overflow-y: auto; /* Permite scroll solo en pantallas muy pequeñas */
+    height: auto;
+  }
+  .selection-container {
+    height: auto;
+    padding: 2rem 0;
+  }
+  .role-grid {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+    margin: 2vh auto;
+  }
+}

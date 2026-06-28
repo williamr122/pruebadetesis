@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visor PDF YELIA</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a1a;
+      color: #eeeeee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #toolbar {
+      display: none; /* Shown after load */
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 16px;
+      background: rgba(30, 30, 30, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      z-index: 100;
+    }
+    #toolbar button {
+      background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+      color: white;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: opacity 0.2s, transform 0.1s;
+      box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+    }
+    #toolbar button:hover {
+      opacity: 0.9;
+    }
+    #toolbar button:active {
+      transform: scale(0.97);
+    }
+    #toolbar button:disabled {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.3);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    #page-num-indicator {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #ffffff;
+      min-width: 110px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+    #viewer-container {
+      display: none; /* Shown after load */
+      flex: 1;
+      overflow: hidden;
+      justify-content: center;
+      align-items: center;
+      padding: 6px;
+      box-sizing: border-box;
+      background-color: #121212;
+    }
+    #page-wrapper {
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      background-color: #ffffff;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-width: 100%;
+      max-height: 100%;
+      box-sizing: border-box;
+    }
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 55px);
+      width: auto !important;
+      height: auto !important;
+    }
+    #status-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 16px 28px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border-left-color: #0d6efd;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="status-overlay">
+    <div class="spinner"></div>
+    <span id="status-text">Cargando visor...</span>
+  </div>
+
+  <div id="toolbar">
+    <button id="prev-btn" onclick="prevPage()" disabled>
+      &lt; Anterior
+    </button>
+    <span id="page-num-indicator">Página 0 de 0</span>
+    <button id="next-btn" onclick="nextPage()" disabled>
+      Siguiente &gt;
+    </button>
+  </div>
+
+  <div id="viewer-container">
+    <div id="page-wrapper"></div>
+  </div>
+
+  <script>
+    // Robust CDN Loading Chain for PDF.js
+    const cdns = [
+      { lib: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js', worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js' },
+      { lib: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js', worker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js' },
+      { lib: 'https://unpkg.com/pdfjs-dist@2.16.105/build/pdf.min.js', worker: 'https://unpkg.com/pdfjs-dist@2.16.105/build/pdf.worker.min.js' }
+    ];
+
+    let currentCdnIndex = 0;
+    let pdfDoc = null;
+    let pageNum = 1;
+    let pageRendering = false;
+    let pageNumPending = null;
+    let url = "";
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function initializePdfjs() {
+      while (currentCdnIndex < cdns.length) {
+        const cdn = cdns[currentCdnIndex];
+        try {
+          updateStatus('Cargando motor PDF...');
+          await loadScript(cdn.lib);
+          if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = cdn.worker;
+            return true;
+          }
+        } catch (e) {
+          console.warn(`Failed loading PDF.js from CDN index ${currentCdnIndex}, trying next...`);
+        }
+        currentCdnIndex++;
+      }
+      return false;
+    }
+
+    function updateStatus(text, showSpinner = true) {
+      document.getElementById('status-text').textContent = text;
+      const spinner = document.querySelector('.spinner');
+      if (spinner) spinner.style.display = showSpinner ? 'block' : 'none';
+    }
+
+    async function start() {
+      const isLoaded = await initializePdfjs();
+      if (!isLoaded) {
+        updateStatus('Error: No se pudo cargar el motor PDF. Revisa tu conexión a internet.', false);
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const fileUrl = params.get('file');
+
+      if (!fileUrl) {
+        updateStatus('Error: No se especificó ningún archivo PDF.', false);
+        return;
+      }
+
+      url = fileUrl;
+      loadPDF(fileUrl);
+    }
+
+    async function loadPDF(fileUrl) {
+      try {
+        updateStatus('Descargando documento...');
+        const loadingTask = window.pdfjsLib.getDocument(fileUrl);
+        pdfDoc = await loadingTask.promise;
+        
+        document.getElementById('status-overlay').style.display = 'none';
+        document.getElementById('toolbar').style.display = 'flex';
+        document.getElementById('viewer-container').style.display = 'flex';
+        
+        pageNum = 1;
+        renderPage(pageNum);
+      } catch (err) {
+        console.error('Error loading PDF:', err);
+        document.getElementById('status-overlay').style.display = 'flex';
+        updateStatus('Error: No se pudo abrir el archivo PDF.', false);
+      }
+    }
+
+    async function renderPage(num) {
+      pageRendering = true;
+      document.getElementById('status-overlay').style.display = 'flex';
+      updateStatus(`Cargando página ${num}...`);
+      
+      try {
+        const page = await pdfDoc.getPage(num);
+        const viewport = page.getViewport({ scale: 1.8 });
+        
+        const wrapper = document.getElementById('page-wrapper');
+        wrapper.innerHTML = '';
+        
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        wrapper.appendChild(canvas);
+        
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+        
+        pageRendering = false;
+        document.getElementById('status-overlay').style.display = 'none';
+        
+        document.getElementById('page-num-indicator').textContent = `Página ${num} de ${pdfDoc.numPages}`;
+        document.getElementById('prev-btn').disabled = (num <= 1);
+        document.getElementById('next-btn').disabled = (num >= pdfDoc.numPages);
+        
+        document.getElementById('viewer-container').scrollTop = 0;
+
+        // Post page changed event to parent window
+        window.parent.postMessage({ 
+          type: 'pdf-page-changed', 
+          page: num, 
+          total: pdfDoc.numPages, 
+          url: url 
+        }, window.location.origin);
+
+        if (num === pdfDoc.numPages) {
+          window.parent.postMessage({ type: 'pdf-completed', url: url }, window.location.origin);
+        }
+        
+        if (pageNumPending !== null) {
+          renderPage(pageNumPending);
+          pageNumPending = null;
+        }
+      } catch (err) {
+        console.error('Error rendering page:', err);
+        pageRendering = false;
+        document.getElementById('status-overlay').style.display = 'flex';
+        updateStatus('Error: No se pudo renderizar la página.', false);
+      }
+    }
+
+    function queueRenderPage(num) {
+      if (pageRendering) {
+        pageNumPending = num;
+      } else {
+        renderPage(num);
+      }
+    }
+
+    function prevPage() {
+      if (pageNum <= 1) return;
+      pageNum--;
+      queueRenderPage(pageNum);
+    }
+
+    function nextPage() {
+      if (pageNum >= pdfDoc.numPages) return;
+      pageNum++;
+      queueRenderPage(pageNum);
+    }
+
+    start();
+  </script>
+</body>
+</html>
