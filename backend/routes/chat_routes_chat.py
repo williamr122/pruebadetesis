@@ -1378,6 +1378,8 @@ def api_chat():
                         "INSERT INTO messages (conv_id, usuario, remitente, contenido, tema, proveedor, response_ms) VALUES (?, ?, 'bot', ?, ?, 'local', 0);",
                         (conv_id, usuario, fallback_text, tema),
                     )
+                    if cur.lastrowid is not None:
+                        bot_message_id = int(cur.lastrowid)
         except Exception as db_err:
             logger.warning("No se pudo guardar mensaje de fallback en la base de datos", error=str(db_err))
 
@@ -1444,6 +1446,7 @@ def api_chat():
                 modo_interaccion=modo_interaccion,
                 intencion=intencion,
                 tema=tema,
+                mensaje_id=bot_message_id,
             )
         except Exception:
             pass

@@ -203,6 +203,34 @@ def es_opcion_menu(texto: str) -> bool:
     return t in _MENU_TRIGGERS_N
 
 
+def es_consulta_ventajas_utilidad(pregunta_lower: str) -> bool:
+    """True si la pregunta parece consultar ventajas, beneficios, para qué sirve, utilidad o importancia."""
+    t = (pregunta_lower or "").lower()
+    t = (
+        t.replace("á", "a").replace("é", "e").replace("í", "i")
+         .replace("ó", "o").replace("ú", "u").replace("ü", "u")
+         .replace("ñ", "n")
+    )
+    t = re.sub(r"[^a-z0-9\s]", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+
+    patrones = [
+        r"ventajas\s+de(l)?\b",
+        r"beneficios\s+de(l)?\b",
+        r"para\s+que\s+sirv(e|en)\b",
+        r"cual\s+es\s+la\s+utilidad\s+de(l)?\b",
+        r"importancia\s+de(l)?\b",
+        r"por\s+que\s+es\s+importante\b",
+        r"por\s+que\s+son\s+importantes\b",
+        r"que\s+aporta(n)?\b",
+        r"en\s+que\s+ayuda(n)?\b"
+    ]
+    for pattern in patrones:
+        if re.search(pattern, t):
+            return True
+    return False
+
+
 def detectar_modo_interaccion(pregunta_lower: str) -> str:
     """Determina el modo de interacción esperado por el estudiante.
 
@@ -280,6 +308,9 @@ def detectar_intencion_semantica(pregunta_lower: str) -> str:
     # FIX: evita "offtopic" cuando el estudiante solo presiona una opción del menú.
     if es_opcion_menu(pl):
         return "continuacion"
+
+    if es_consulta_ventajas_utilidad(pl):
+        return "teoria"
 
     # 1) Continuación conversacional (ej: "sí", "quiero saber más", "continúa")
     if es_mensaje_de_continuacion(pl):

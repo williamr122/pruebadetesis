@@ -1145,6 +1145,110 @@ export default function ChatApp() {
   const [backendAvatar, setBackendAvatar] = useState(null);
   const [routeContext, setRouteContext] = useState(null);
   const [routeNoticeOpen, setRouteNoticeOpen] = useState(false);
+  const [dbRoute, setDbRoute] = useState(null);
+
+  const fetchRoute = async () => {
+    try {
+      const data = await api.get('/api/learning-route');
+      if (data && data.route) {
+        setDbRoute(data.route);
+      }
+    } catch (err) {
+      console.error('Error al obtener la ruta en ChatApp:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoute();
+    const handleFocus = () => {
+      fetchRoute();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (routeNoticeOpen) {
+      fetchRoute();
+    }
+  }, [routeNoticeOpen]);
+
+  const pendingResourcesData = useMemo(() => {
+    if (!dbRoute || !dbRoute.units) return { unitId: null, unitTitle: '', resources: [] };
+    
+    let activeUnitId = null;
+    for (let i = 1; i <= 4; i++) {
+      const unitState = dbRoute.units[String(i)];
+      if (unitState && unitState.status !== 'done') {
+        activeUnitId = i;
+        break;
+      }
+    }
+    
+    if (!activeUnitId) {
+      return { unitId: null, unitTitle: '', resources: [] };
+    }
+    
+    const unitState = dbRoute.units[String(activeUnitId)];
+    const unitInfo = ROUTE_UNITS[activeUnitId];
+    if (!unitState || !unitInfo) {
+      return { unitId: null, unitTitle: '', resources: [] };
+    }
+    
+    const pending = [];
+    
+    if (!unitState.content_done) {
+      pending.push({
+        type: 'pdf',
+        text: '📄 PDF pendiente de lectura.',
+        url: `/visor-pdf?unidad=${activeUnitId}&tipo=contenido`
+      });
+    }
+    if (!unitState.presentation_done) {
+      pending.push({
+        type: 'presentation',
+        text: '📊 Presentación pendiente.',
+        url: `/visor-pdf?unidad=${activeUnitId}&tipo=presentacion`
+      });
+    }
+    if (!unitState.videos_done) {
+      pending.push({
+        type: 'video',
+        text: '🎥 Video pendiente.',
+        url: `/leccion?unidad=${activeUnitId}&modo=videos`
+      });
+    }
+    if (!unitState.workshop_done) {
+      pending.push({
+        type: 'workshop',
+        text: '📝 Taller pendiente.',
+        url: `/leccion?unidad=${activeUnitId}&modo=taller`
+      });
+    }
+    if (!unitState.lesson_done) {
+      pending.push({
+        type: 'lesson',
+        text: '📚 Lección pendiente.',
+        url: `/leccion?unidad=${activeUnitId}&modo=leccion`
+      });
+    }
+    const isExamDone = unitState.status === 'done' || (unitState.quiz && unitState.quiz.passed);
+    if (!isExamDone) {
+      pending.push({
+        type: 'exam',
+        text: '✅ Examen de unidad pendiente.',
+        url: `/ruta`
+      });
+    }
+    
+    return {
+      unitId: activeUnitId,
+      unitTitle: unitInfo.title,
+      resources: pending
+    };
+  }, [dbRoute]);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [activeAttachmentId, setActiveAttachmentId] = useState(null);
@@ -2033,48 +2137,119 @@ export default function ChatApp() {
                   </a>
                   {!routeNoticeOpen && (
                     <button className="yelia-route-notice-bubble" type="button" onClick={() => setRouteNoticeOpen(true)} aria-label="Ver notificaciones">
-                      <i className={`bi ${routeContext ? 'bi-bell-fill' : 'bi-bell'}`}></i>
-                      {routeContext && <span>1</span>}
+                      <i className={`bi ${pendingResourcesData.resources.length > 0 ? 'bi-bell-fill' : 'bi-bell'}`}></i>
+                      {pendingResourcesData.resources.length > 0 && <span>{pendingResourcesData.resources.length}</span>}
                     </button>
                   )}
                 </div>
               </div>
             </div>
 
-            {routeContext && routeNoticeOpen && (
-              <div className="yelia-route-context-card yelia-route-floating-card">
-                <div>
-                  <span>Unidad activa</span>
-                  <strong>Unidad {routeContext.id}: {routeContext.title}</strong>
-                  <small>{(routeContext.topics || []).slice(0, 4).join(' - ')}</small>
-                </div>
-                <div className="yelia-route-context-actions">
-                  <button type="button" onClick={() => setInput(routeContext.prompt || '')}>
-                    Usar
-                  </button>
-                  <button className="yelia-route-primary-action" type="button" onClick={sendRouteGuide} disabled={loading}>
-                    Enviar
-                  </button>
-                  <a href="/ruta">Ver ruta</a>
-                  <button type="button" onClick={() => setRouteNoticeOpen(false)} aria-label="Minimizar sugerencia de unidad">
-                    <i className="bi bi-x-lg"></i>
+            {routeNoticeOpen && (
+              <div className="yelia-route-context-card yelia-route-floating-card" style={{ display: 'block', padding: '16px 20px', minWidth: '320px', maxWidth: '420px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(103, 232, 249, .92)' }}>
+                    Notificaciones
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRouteNoticeOpen(false)}
+                    aria-label="Cerrar notificaciones"
+                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                  >
+                    <i className="bi bi-x-lg" style={{ fontSize: '0.9rem' }}></i>
                   </button>
                 </div>
-              </div>
-            )}
 
-            {!routeContext && routeNoticeOpen && (
-              <div className="yelia-route-context-card yelia-route-floating-card yelia-route-empty-card">
-                <div>
-                  <span>Notificaciones</span>
-                  <strong>Sin notificaciones pendientes</strong>
-                  <small>Aqui apareceran recursos sugeridos, feedback o una unidad activa cuando YELIA detecte que debes revisar algo.</small>
-                </div>
-                <div className="yelia-route-context-actions">
-                  <a href="/ruta">Ver ruta</a>
-                  <button type="button" onClick={() => setRouteNoticeOpen(false)} aria-label="Cerrar notificaciones">
-                    <i className="bi bi-x-lg"></i>
-                  </button>
+                {pendingResourcesData.resources.length > 0 ? (
+                  <div>
+                    <strong style={{ display: 'block', color: '#fff', fontSize: '0.94rem', whiteSpace: 'normal', lineHeight: 1.3, marginBottom: '6px' }}>
+                      Unidad {pendingResourcesData.unitId}: {pendingResourcesData.unitTitle}
+                    </strong>
+                    <small style={{ display: 'block', color: 'rgba(226, 239, 255, .76)', fontSize: '0.78rem', whiteSpace: 'normal', marginBottom: '12px', lineHeight: 1.4 }}>
+                      Tienes los siguientes recursos pendientes de completar para avanzar:
+                    </small>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {pendingResourcesData.resources.map((res, i) => (
+                        <a
+                          key={i}
+                          href={res.url}
+                          target={res.type === 'pdf' || res.type === 'presentation' ? '_blank' : '_self'}
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 12px',
+                            borderRadius: '12px',
+                            background: 'rgba(34, 211, 238, .05)',
+                            border: '1px solid rgba(34, 211, 238, .12)',
+                            color: '#fff',
+                            textDecoration: 'none',
+                            transition: 'all 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(34, 211, 238, .12)';
+                            e.currentTarget.style.borderColor = 'rgba(34, 211, 238, .3)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(34, 211, 238, .05)';
+                            e.currentTarget.style.borderColor = 'rgba(34, 211, 238, .12)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          <span style={{ fontSize: '1.2rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {res.text.split(' ')[0]}
+                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                            <span style={{ fontSize: '0.82rem', color: '#e2efff', fontWeight: '500', display: 'block', whiteSpace: 'normal', lineHeight: 1.25 }}>
+                              {res.text.slice(res.text.indexOf(' ') + 1)}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: 'rgba(103, 232, 249, 0.8)', marginTop: '3px', display: 'block' }}>
+                              Completar recurso <i className="bi bi-arrow-right-short"></i>
+                            </span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '24px 12px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                      <i className="bi bi-check2-circle" style={{ fontSize: '1.6rem', color: '#10b981' }}></i>
+                    </div>
+                    <strong style={{ display: 'block', color: '#fff', fontSize: '0.94rem', whiteSpace: 'normal', marginBottom: '6px' }}>
+                      Sin notificaciones pendientes
+                    </strong>
+                    <small style={{ display: 'block', color: 'rgba(226, 239, 255, .76)', fontSize: '0.78rem', whiteSpace: 'normal', lineHeight: 1.4 }}>
+                      ¡Has completado todos los recursos disponibles por ahora!
+                    </small>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                  <a
+                    href="/ruta"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.74rem',
+                      color: '#67e8f9',
+                      textDecoration: 'none',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                  >
+                    Ver mi ruta <i className="bi bi-arrow-right-short"></i>
+                  </a>
                 </div>
               </div>
             )}

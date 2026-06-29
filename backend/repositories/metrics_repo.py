@@ -228,19 +228,24 @@ def log_event(
     if not event_type:
         event_type = str(kwargs.get("tipo") or "generic")
 
+    mensaje_id = kwargs.get("mensaje_id") or kwargs.get("message_id")
+    conv_id = conversation_id or kwargs.get("conv_id")
+
     with db_session(write=True) as conn:
         cur = conn.cursor()
         cur.execute(
             """
             INSERT INTO metrics_events
-            (created_at, usuario, conversation_id, event_type,
+            (created_at, usuario, conversation_id, conv_id, mensaje_id, event_type,
              dominio_status, modo_interaccion, intencion, tema, confusion_detectada)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """,
             (
                 datetime.datetime.now().isoformat(timespec="seconds"),
                 usuario,
                 conversation_id,
+                conv_id,
+                mensaje_id,
                 event_type,
                 dominio_status,
                 modo_interaccion,

@@ -722,6 +722,60 @@ def procesar_consulta_educativa(
             }
 
 
+def obtener_recordatorio_diagnostico(usuario: str) -> str:
+    """Retorna un recordatorio amigable personalizado con los temas a reforzar según el diagnóstico."""
+    if not usuario:
+        return "\n\n**Recordatorio de YELIA:** No olvides realizar tu **Diagnóstico inicial** para identificar qué temas necesitas reforzar."
+
+    try:
+        from backend.db.session import db_session
+        import json
+        with db_session(write=False) as conn:
+            cur = conn.cursor()
+            # Query latest diagnostic attempt
+            cur.execute(
+                "SELECT answers_json FROM diagnostic_attempts WHERE LOWER(usuario) = LOWER(?) ORDER BY id DESC LIMIT 1;",
+                (usuario,)
+            )
+            row = cur.fetchone()
+            if row:
+                answers_json = row["answers_json"]
+                if answers_json:
+                    details = json.loads(answers_json)
+                    missed = []
+                    for item in details:
+                        if not item.get("correct", True) and item.get("topic"):
+                            t_name = item["topic"]
+                            if t_name not in missed:
+                                missed.append(t_name)
+                    if missed:
+                        if len(missed) == 1:
+                            temas_str = f"**{missed[0]}**"
+                        elif len(missed) == 2:
+                            temas_str = f"**{missed[0]}** y **{missed[1]}**"
+                        else:
+                            temas_str = ", ".join(f"**{t}**" for t in missed[:-1]) + f" y **{missed[-1]}**"
+                        return f"\n\n**Recordatorio de YELIA:** No olvides revisar y reforzar los temas que presentaron mayor dificultad en tu diagnóstico, especialmente {temas_str}."
+                    else:
+                        return "\n\n**Recordatorio de YELIA:** No olvides revisar y reforzar los temas de la materia para seguir avanzando con tu excelente desempeño en el diagnóstico."
+
+            # Fallback: check if they have at least level_materia in progress
+            cur.execute("SELECT nivel_materia FROM progreso WHERE LOWER(usuario) = LOWER(?);", (usuario,))
+            row_p = cur.fetchone()
+            if row_p and row_p["nivel_materia"] and row_p["nivel_materia"] != "Por diagnosticar":
+                lvl = row_p["nivel_materia"]
+                if lvl in ["Sin conocimientos", "Basico"]:
+                    return "\n\n**Recordatorio de YELIA:** No olvides revisar y reforzar los temas que presentaron mayor dificultad en tu diagnóstico, especialmente **Clases y Objetos**."
+                elif lvl == "Intermedio":
+                    return "\n\n**Recordatorio de YELIA:** No olvides revisar y reforzar los temas que presentaron mayor dificultad en tu diagnóstico, especialmente **Herencia** y **Polimorfismo**."
+                else:
+                    return "\n\n**Recordatorio de YELIA:** No olvides revisar y reforzar los temas que presentaron mayor dificultad en tu diagnóstico, especialmente **Patrones de Diseño**."
+    except Exception:
+        pass
+
+    return "\n\n**Recordatorio de YELIA:** No olvides realizar tu **Diagnóstico inicial** para identificar qué temas necesitas reforzar."
+
+
 def _procesar_consulta_educativa_impl(
     pregunta: str,
     historial: List[Dict[str, Any]] | None,
@@ -1040,6 +1094,13 @@ def _procesar_consulta_educativa_impl(
         )
         respuesta = offline["respuesta"]
         proveedor_usado = "local"
+
+    # Recordatorio personalizado según el diagnóstico
+    from backend.nlp.domain import es_tema_de_programacion_avanzada
+    if respuesta and es_tema_de_programacion_avanzada(tema_identificado):
+        recom = obtener_recordatorio_diagnostico(usuario)
+        if recom and recom.strip() not in respuesta:
+            respuesta = respuesta.strip() + recom
 
     resultado = {
         "ok": True,

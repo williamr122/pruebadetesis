@@ -761,18 +761,22 @@ def api_teacher_requests_decide(request_id: int, action: str):
         if (req["status"] or "pending").lower() != "pending":
             return _err("La solicitud ya fue procesada.", 400)
 
+        import datetime
+        ecuador_tz = datetime.timezone(datetime.timedelta(hours=-5))
+        now_ecuador = datetime.datetime.now(ecuador_tz).strftime("%Y-%m-%d %H:%M:%S")
+
         status = "approved" if action == "approve" else "rejected"
         if action == "approve":
             cur.execute("SELECT 1 FROM accounts WHERE username = ? LIMIT 1;", (req["username"],))
             if cur.fetchone():
                 return _err("Ya existe una cuenta con ese usuario.", 400)
             cur.execute(
-                "INSERT INTO accounts (username, email, password_hash, role, status) VALUES (?, ?, ?, 'teacher', 'active');",
-                (req["username"], req["email"], req["password_hash"]),
+                "INSERT INTO accounts (username, email, password_hash, role, status, created_at, updated_at) VALUES (?, ?, ?, 'teacher', 'active', ?, ?);",
+                (req["username"], req["email"], req["password_hash"], now_ecuador, now_ecuador),
             )
         cur.execute(
-            "UPDATE teacher_requests SET status = ?, decided_by = ?, decided_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?;",
-            (status, _any_username() or "admin", request_id),
+            "UPDATE teacher_requests SET status = ?, decided_by = ?, decided_at = ?, updated_at = ? WHERE id = ?;",
+            (status, _any_username() or "admin", now_ecuador, now_ecuador, request_id),
         )
         conn.commit()
 

@@ -268,6 +268,84 @@ AMBIGUOS: Dict[str, List[str]] = {
 }
 
 
+def es_tema_de_programacion_avanzada(tema_name: str) -> bool:
+    """True si el tema pertenece a las primeras 4 unidades de Programación Avanzada."""
+    if not tema_name:
+        return False
+    if tema_name.lower() in ["programacion avanzada", "programación avanzada"]:
+        return True
+
+    try:
+        from backend.services.temas_service import TEMAS_DISPONIBLES, cargar_temas
+        if not TEMAS_DISPONIBLES:
+            cargar_temas()
+
+        for t in TEMAS_DISPONIBLES:
+            if t.get("nombre", "").lower() == tema_name.lower():
+                unidad_str = t.get("unidad", "")
+                for u_num in ["unidad 1", "unidad 2", "unidad 3", "unidad 4"]:
+                    if u_num in unidad_str.lower():
+                        return True
+                return False
+    except Exception:
+        pass
+
+    keywords = [
+        "poo", "clase", "objeto", "encapsulamiento", "herencia", "polimorfismo",
+        "abstracta", "interfaz", "uml", "secuencia", "actividades", "excepciones",
+        "colecciones", "patron", "patrón", "mvc", "archivos", "bases de datos", "orm",
+        "jdbc", "pruebas", "concurrente", "distribuida"
+    ]
+    name_lower = tema_name.lower()
+    if any(kw in name_lower for kw in keywords):
+        return True
+
+    return False
+
+
+def tiene_tema_de_las_4_unidades(pregunta_lower: str) -> bool:
+    """True si el texto contiene palabras clave asociadas a temas de las primeras 4 unidades."""
+    t = (pregunta_lower or "").lower()
+    t = (
+        t.replace("á", "a").replace("é", "e").replace("í", "i")
+         .replace("ó", "o").replace("ú", "u").replace("ü", "u")
+         .replace("ñ", "n")
+    )
+    t = re.sub(r"[^a-z0-9\s]", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+
+    keywords_4_unidades = [
+        "poo", "programacion orientada a objetos", "orientacion a objetos", "orientada a objetos",
+        "clase", "clases", "objeto", "objetos",
+        "encapsulamiento", "encapsulacion",
+        "herencia", "polimorfismo",
+        "clases abstractas", "interfaces", "abstract", "interfaz",
+        "uml", "diagrama", "casos de uso", "diagrama de clases",
+        "asociacion", "agregacion", "composicion", "relaciones",
+        "multiplicidad", "navegacion", "diagrama de secuencia", "diagrama de actividades",
+        "excepciones", "try catch", "exception",
+        "colecciones", "list", "set", "map", "arraylist", "hashmap", "hashset",
+        "patrones de diseno", "patron", "patrones", "singleton", "factory",
+        "mvc", "modelo vista controlador",
+        "archivos", "acceso a archivos",
+        "bases de datos", "bd", "orm", "jdbc", "sql", "hibernate",
+        "pruebas", "buenas practicas", "junit", "pruebas unitarias",
+        "concurrente", "distribuida", "hilos", "threads", "socket", "sockets", "tcp", "udp",
+        "constructor", "constructores", "metodo", "metodos", "atributo", "atributos", "persistencia"
+    ]
+
+    return any(kw in t for kw in keywords_4_unidades)
+
+
+def es_pregunta_ventajas_utilidad_unidades(pregunta_lower: str) -> bool:
+    """True si la pregunta es sobre ventajas/utilidad/etc de un tema de las unidades 1-4."""
+    from backend.nlp.intent import es_consulta_ventajas_utilidad
+    if not es_consulta_ventajas_utilidad(pregunta_lower):
+        return False
+
+    return tiene_tema_de_las_4_unidades(pregunta_lower)
+
+
 def match_domain(text_raw: str) -> str:
     """Clasifica el texto en 'core', 'ext' u 'off'.
 
@@ -288,6 +366,10 @@ def match_domain(text_raw: str) -> str:
     """
     t = norm(text_raw)
     tokens = set(t.split())
+
+    # 0) Comprobación de ventajas/utilidad en las 4 unidades
+    if es_pregunta_ventajas_utilidad_unidades(text_raw):
+        return "core"
 
     # 1) CORE primero (sílabo)
     if (

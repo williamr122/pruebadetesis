@@ -167,6 +167,16 @@ body::before{
       color: var(--danger-tx) !important;
     }
 
+    .alert-success {
+      background: rgba(16, 185, 129, 0.16) !important;
+      border: 1px solid rgba(16, 185, 129, 0.40) !important;
+      color: #a7f3d0 !important;
+    }
+    .alert-success *,
+    .alert-success {
+      color: #a7f3d0 !important;
+    }
+
 /* =========================================================
    Diseño propio login docente
 ========================================================= */

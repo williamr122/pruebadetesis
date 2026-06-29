@@ -205,12 +205,14 @@ def api_teacher_request_account():
         )
         if cur.fetchone():
             return jsonify({"success": False, "message": "Ya existe una solicitud pendiente con ese usuario."}), 400
+        ecuador_tz = datetime.timezone(datetime.timedelta(hours=-5))
+        now_ecuador = datetime.datetime.now(ecuador_tz).strftime("%Y-%m-%d %H:%M:%S")
         cur.execute(
             """
-            INSERT INTO teacher_requests (username, email, password_hash, reason, status)
-            VALUES (?, ?, ?, ?, 'pending');
+            INSERT INTO teacher_requests (username, email, password_hash, reason, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, 'pending', ?, ?);
             """,
-            (username, email, generate_password_hash(password, method="pbkdf2:sha256", salt_length=16), reason),
+            (username, email, generate_password_hash(password, method="pbkdf2:sha256", salt_length=16), reason, now_ecuador, now_ecuador),
         )
         conn.commit()
 

@@ -340,12 +340,20 @@ def actualizar_progreso(
                     (puntos, temas_json, usuario),
                 )
             else:
+                ciclo = prof.get("ciclo") or prof.get("course")
+                estado = prof.get("estado")
+                if not estado and prof.get("tags"):
+                    t = prof.get("tags")
+                    if isinstance(t, list):
+                        estado = ", ".join(t) if t else None
+                    else:
+                        estado = str(t)
                 cur.execute(
                     """
-                    INSERT INTO progreso (usuario, puntos, temas_aprendidos, nivel_materia)
-                    VALUES (?, ?, ?, ?);
+                    INSERT INTO progreso (usuario, puntos, temas_aprendidos, nivel_materia, ciclo_academico, estado_materia)
+                    VALUES (?, ?, ?, ?, ?, ?);
                     """,
-                    (usuario, puntos, temas_json, nivel_materia),
+                    (usuario, puntos, temas_json, nivel_materia, ciclo, estado),
                 )
 
         # Leer de student_profiles el ciclo y estado
@@ -421,7 +429,7 @@ def actualizar_perfil_usuario(
 
         save_profile(usuario, prof)
 
-        # Si se especifica el nivel_materia, lo actualizamos en la tabla progreso
+        # También actualizamos en la tabla progreso
         with db_session(write=True) as conn:
             cur = conn.cursor()
             cur.execute(
@@ -435,18 +443,20 @@ def actualizar_perfil_usuario(
                     """
                     UPDATE progreso
                     SET nivel_materia = COALESCE(?, nivel_materia),
+                        ciclo_academico = COALESCE(?, ciclo_academico),
+                        estado_materia = COALESCE(?, estado_materia),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE usuario = ?;
                     """,
-                    (nivel_materia, usuario),
+                    (nivel_materia, ciclo_academico, estado_materia, usuario),
                 )
             else:
                 cur.execute(
                     """
-                    INSERT INTO progreso (usuario, nivel_materia)
-                    VALUES (?, ?);
+                    INSERT INTO progreso (usuario, nivel_materia, ciclo_academico, estado_materia)
+                    VALUES (?, ?, ?, ?);
                     """,
-                    (usuario, nivel_materia),
+                    (usuario, nivel_materia, ciclo_academico, estado_materia),
                 )
 
         logger.info(

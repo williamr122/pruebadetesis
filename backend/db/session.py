@@ -451,6 +451,15 @@ def init_db(app=None) -> None:
                     quality_score REAL,
                     motivo TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    conversation_id INTEGER,
+                    event_type TEXT,
+                    dominio_status TEXT,
+                    modo_interaccion TEXT,
+                    intencion TEXT,
+                    tema TEXT,
+                    confusion_detectada INTEGER DEFAULT 0,
+                    path TEXT,
+                    meta_json TEXT,
                     FOREIGN KEY(conv_id) REFERENCES conversaciones(id),
                     FOREIGN KEY(mensaje_id) REFERENCES messages(id)
                 );
@@ -558,6 +567,29 @@ def init_db(app=None) -> None:
             ]
             for idx in indexes:
                 cur.execute(idx)
+
+            views = [
+                "CREATE VIEW IF NOT EXISTS mensajes AS SELECT id, conv_id AS conversacion_id, usuario, remitente, contenido, tema, created_at AS creado_en, proveedor, response_ms AS tiempo_respuesta_ms FROM messages;",
+                "CREATE VIEW IF NOT EXISTS solicitudes_docentes AS SELECT id, username AS nombre_usuario, email AS correo, reason AS motivo, status AS estado, created_at AS creado_en, updated_at AS actualizado_en, decided_by AS decidido_por, decided_at AS decidido_en FROM teacher_requests;",
+                "CREATE VIEW IF NOT EXISTS cuentas AS SELECT id, username AS nombre_usuario, email AS correo, role AS rol, status AS estado, created_at AS creado_en, last_seen AS ultima_vez, updated_at AS actualizado_en FROM accounts;",
+                "CREATE VIEW IF NOT EXISTS archivos_adjuntos AS SELECT id, conv_id AS conversacion_id, message_id AS mensaje_id, usuario, original_name AS nombre_original, stored_name AS nombre_almacenado, filename AS nombre_archivo, file_path AS ruta_archivo, mime AS tipo_mime, size_bytes AS tamano_bytes, sha256, url, status AS estado, uploaded_at AS subido_en, created_at AS creado_en FROM attachments;",
+                "CREATE VIEW IF NOT EXISTS cuestionarios_estructurados AS SELECT id, conv_id AS conversacion_id, usuario, tema, source_message_id AS mensaje_origen_id, quiz_json AS cuestionario_json, status AS estado, last_score AS ultimo_puntaje, total_questions AS total_preguntas, answered_at AS respondido_en, created_at AS creado_en, updated_at AS actualizado_en FROM structured_quizzes;",
+                "CREATE VIEW IF NOT EXISTS eventos_metricas AS SELECT id, conv_id AS conversacion_id, usuario, mensaje_id, nivel_detectado, quality_score AS puntaje_calidad, motivo, created_at AS creado_en, event_type AS tipo_evento, dominio_status AS estado_dominio, modo_interaccion, intencion, tema, confusion_detectada FROM metrics_events;",
+                "CREATE VIEW IF NOT EXISTS registros_auditoria AS SELECT id, actor, action AS accion, target AS objetivo, meta_json, created_at AS creado_en FROM audit_logs;",
+                "CREATE VIEW IF NOT EXISTS rutas_aprendizaje AS SELECT id, usuario, route_json AS ruta_json, updated_at AS actualizado_en FROM learning_routes;",
+                "CREATE VIEW IF NOT EXISTS feedback_metricas AS SELECT id, created_at AS creado_en, usuario, conversation_id AS conversacion_id, rating AS calificacion, note AS nota FROM metrics_feedback;",
+                "CREATE VIEW IF NOT EXISTS rendimiento_metricas AS SELECT id, created_at AS creado_en, usuario, conversation_id AS conversacion_id, endpoint AS punto_acceso, latency_ms AS latencia_ms FROM metrics_perf;",
+                "CREATE VIEW IF NOT EXISTS recomendaciones_metricas AS SELECT id, created_at AS creado_en, usuario, conversation_id AS conversacion_id, recommendation_type AS tipo_recomendacion, title AS titulo, topic AS tema, level_used AS nivel_usado, emotion_used AS emocion_usada, priority AS prioridad, history_based AS basado_en_historial, history_reason AS razon_historial, source AS fuente, url, reason AS motivo FROM metrics_recommendations;",
+                "CREATE VIEW IF NOT EXISTS feedback_adaptativo_metricas AS SELECT id, created_at AS creado_en, usuario, conversation_id AS conversacion_id, kind AS tipo, status AS estado, topic AS tema, level_used AS nivel_usado, emotion_used AS emocion_usada, next_action AS siguiente_accion, score_delta AS diferencia_puntaje, recommendation AS recomendacion FROM metrics_adaptive_feedback;",
+                "CREATE VIEW IF NOT EXISTS intentos_diagnostico AS SELECT id, usuario, alias, ciclo_academico, estado_materia, nivel_materia, score AS puntaje, total, answers_json AS respuestas_json, feedback AS retroalimentacion, created_at AS creado_en FROM diagnostic_attempts;",
+                "CREATE VIEW IF NOT EXISTS perfiles_estudiantes AS SELECT student_id AS estudiante_id, profile_json AS perfil_json, updated_at AS actualizado_en FROM student_profiles;"
+            ]
+            for view_sql in views:
+                try:
+                    cur.execute(view_sql)
+                except Exception as e:
+                    # Si ya existiese una tabla u objeto con ese nombre, evitar fallo crítico
+                    logger.warning("No se pudo crear la vista en español", query=view_sql, error=str(e))
 
     logger.info("Base de datos inicializada correctamente", engine=engine, target=log_target)
 

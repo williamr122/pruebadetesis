@@ -126,36 +126,68 @@ def llamar_gemini(
     if not _enabled:
         return ""
 
-    # Unimos system + user para el SDK clásico, o usamos config/system_instruction en el nuevo
+    model_to_use = GEMINI_MODEL or "gemini-2.5-pro"
+
+    # Intento 1: Modelo principal
     try:
-        if _mode == "google-genai":
-            # SDK NUEVO
-            from google.genai import types  # type: ignore
-
-            if _client is None:
+        _logger.info("Usando Gemini: %s", model_to_use)
+        res = _llamar_api_con_modelo(model_to_use, prompt_system, pregunta_user, max_tokens, temperature)
+        if res:
+            _logger.info("Gemini respondió con modelo: %s", model_to_use)
+        return res
+    except Exception as e:
+        _logger.warning("Error llamando Gemini con %s: %s", model_to_use, str(e))
+        # Intento 2: Fallback automático a gemini-2.5-flash
+        if model_to_use != "gemini-2.5-flash":
+            fallback_model = "gemini-2.5-flash"
+            _logger.info("Fallo con %s. Realizando fallback automáticamente a %s", model_to_use, fallback_model)
+            _logger.info("Usando Gemini: %s", fallback_model)
+            try:
+                res = _llamar_api_con_modelo(fallback_model, prompt_system, pregunta_user, max_tokens, temperature)
+                if res:
+                    _logger.info("Gemini respondió con modelo: %s", fallback_model)
+                return res
+            except Exception as ex:
+                _logger.exception("Error llamando Gemini con fallback %s: %s", fallback_model, str(ex))
                 return ""
-
-            resp = _client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=pregunta_user,
-                config=types.GenerateContentConfig(
-                    system_instruction=prompt_system,
-                    temperature=float(temperature),
-                    max_output_tokens=int(max_tokens),
-                    top_p=0.9,
-                ),
-            )
-
-            # resp.text suele venir listo
-            text = getattr(resp, "text", "") or ""
-            return str(text).strip()
-
-        # SDK CLÁSICO
-        if _model_obj is None:
+        else:
             return ""
 
+
+def _llamar_api_con_modelo(
+    model_name: str,
+    prompt_system: str,
+    pregunta_user: str,
+    max_tokens: int,
+    temperature: float,
+) -> str:
+    if _mode == "google-genai":
+        # SDK NUEVO
+        from google.genai import types  # type: ignore
+
+        if _client is None:
+            raise RuntimeError("Client is not initialized")
+
+        resp = _client.models.generate_content(
+            model=model_name,
+            contents=pregunta_user,
+            config=types.GenerateContentConfig(
+                system_instruction=prompt_system,
+                temperature=float(temperature),
+                max_output_tokens=int(max_tokens),
+                top_p=0.9,
+            ),
+        )
+        text = getattr(resp, "text", "") or ""
+        return str(text).strip()
+
+    elif _mode == "google-generativeai":
+        # SDK CLÁSICO
+        import google.generativeai as genai_old  # type: ignore
+
+        model_obj = genai_old.GenerativeModel(model_name)
         prompt = f"{prompt_system}\n\nUsuario:\n{pregunta_user}".strip()
-        resp = _model_obj.generate_content(
+        resp = model_obj.generate_content(
             prompt,
             generation_config={
                 "temperature": float(temperature),
@@ -163,11 +195,7 @@ def llamar_gemini(
                 "top_p": 0.9,
             },
         )
-
-        # resp.text en google-generativeai
         text = getattr(resp, "text", "") or ""
         return str(text).strip()
 
-    except Exception as e:
-        _logger.exception("Error llamando Gemini | mode=%s | err=%s", _mode, str(e))
-        return ""
+    raise RuntimeError("No Gemini mode active")
